@@ -1,0 +1,212 @@
+package com.cfc.contagino.rest;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+import org.assertj.core.api.IteratorAssert;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
+
+import com.cfc.contagino.bean.SocialMediaFeedResponse;
+import com.cfc.contagino.bo.PandemicAlertBo;
+import com.cfc.contagino.bo.PandemicAlertBoImpl;
+import com.cfc.contagino.config.PandemicAlertConfiguration;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import com.cfc.contagino.entity.*;
+import com.cfc.contagino.exception.PandemicAlertException;
+import com.cfc.contagino.repository.LocationEpidemicRepository;
+import com.cfc.contagino.repository.NluOutputRepository;
+import com.cfc.contagino.repository.PostRepository;
+
+@CrossOrigin("*")
+@RestController
+@RequestMapping(value="/api/v1/contagino/pandemic")
+@ComponentScan(basePackages={"com.cfc.contagino"})
+public class PandemicAlertRestController {
+	
+	@Autowired
+	PandemicAlertBo pandemicAlertBo;
+	
+	@Autowired
+	PandemicAlertConfiguration pandemicAlertConfiguration;
+	
+	@Autowired
+	NluOutputRepository nluOutputRepository;
+	
+	@Autowired
+	LocationEpidemicRepository locationEpidemicRepository;
+	
+	RestTemplate restTemplate=new RestTemplate();
+	
+	private HashMap<String, String>uriParams=new HashMap<String,String>();
+	
+	@GetMapping("/test")
+	public String testService() throws JsonMappingException, JsonProcessingException{
+		saveAllPost();
+		return "Service is UP and Running....";
+	}
+	
+	@GetMapping("/getSocialFeed")
+	public SocialMediaFeedResponse getSocialMediaFeed(){
+		String serviceUrl=pandemicAlertConfiguration.getSocialSearchServiceUrl();
+		String apiKey=pandemicAlertConfiguration.getSocialSearchApiKey();
+		String keywords=pandemicAlertConfiguration.getSocialSearchKeywords();
+		uriParams.put("q", keywords);
+		uriParams.put("key", apiKey);
+		serviceUrl=serviceUrl+"?q="+keywords+"&key="+apiKey;
+		System.out.println(serviceUrl);
+		SocialMediaFeed socialMediaFeed=restTemplate.getForObject(serviceUrl, SocialMediaFeed.class);
+		SocialMediaFeedResponse socialMediaFeedResponse=new SocialMediaFeedResponse();
+		socialMediaFeedResponse.setPost(socialMediaFeed.getPosts());
+		return socialMediaFeedResponse;
+	}
+	
+	@GetMapping("/savePosts")
+	public List<Post> saveAllPost(){
+		List<Post>posts=new ArrayList<Post>();
+		SocialMediaFeedResponse socialMediaFeedResponse=getSocialMediaFeed();
+		posts=socialMediaFeedResponse.getPost();
+		try {
+			posts=pandemicAlertBo.saveSocialMediaPosts(posts);
+		} catch (PandemicAlertException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return posts;
+	}
+	
+	@GetMapping("/getAllPosts")
+	public List<Post>getAllPosts(){
+		List<Post>posts=new ArrayList<Post>();
+		try {
+			posts=pandemicAlertBo.getAllPosts();
+		} catch (PandemicAlertException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return posts;
+	}
+	
+	@GetMapping("/processPosts")
+	public List<NluOutPut> processPost(){
+		List<NluOutPut> masterList=new ArrayList<NluOutPut>();
+		List<NluOutPut> deltaList=new ArrayList<NluOutPut>();
+		try{
+			List<Post>posts=pandemicAlertBo.getPostsByLanguage("en");
+			for(Post post:posts){
+				try{
+					deltaList=pandemicAlertBo.analyzeText(post.getPostid(), post.getText());
+					masterList.addAll(deltaList);
+					deltaList=null;
+				}catch(Exception e){}
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+		return masterList;
+	}
+	
+	@GetMapping("/saveNluOutput")
+	public List<NluOutPut>saveNluOutput(){
+		List<NluOutPut> allNluOutput=new ArrayList<NluOutPut>();
+		try {
+				List<NluOutPut>masterList=processPost();
+				allNluOutput=pandemicAlertBo.saveNluOutput(masterList);
+		} catch (PandemicAlertException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return allNluOutput;
+	}
+	
+	@GetMapping("/saveLocationEpidemic")
+	public List<LocationEpidemic>saveLocationEpidemic(){
+		try{
+			List<NluOutPut> nluLocationOutput=pandemicAlertBo.findNluByEntityType("Location");
+			List<String>postIds=null;
+			/*for(NluOutPut op:nluLocationOutput){
+				postIds.add(op.getPostId());
+			}*/
+			//List<NluOutPut>nluPostIdOutput=nluOutputRepository.findBypostIDIn(postIds);
+			Map<String,Integer>locationOccurance=new HashMap<String,Integer>();
+			String city="";
+			for(NluOutPut op:nluLocationOutput){
+				city=op.getText();
+				city=city.toUpperCase();
+				if(locationOccurance.get(city)!=null){
+					locationOccurance.put(city, locationOccurance.get(city)+1);
+				}else{
+					locationOccurance.put(city,1);
+				}
+			}
+			
+			List<LocationEpidemic>locationEpidemic=new ArrayList<LocationEpidemic>();
+			LocationEpidemic tmpObj=new LocationEpidemic();
+			LocationEpidemicPk id=new LocationEpidemicPk();
+			String loc="";
+			for(Map.Entry<String, Integer> entry:locationOccurance.entrySet()){
+				loc=entry.getKey();
+				id=new LocationEpidemicPk(loc, "Covid19");
+				tmpObj=new LocationEpidemic();
+				tmpObj.setId(id);
+				tmpObj.setInstanceCount(locationOccurance.get(loc));
+				tmpObj.setLastReported(new Date());
+				locationEpidemic.add(tmpObj);
+			}
+			locationEpidemicRepository.saveAll(locationEpidemic);
+			
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	@GetMapping("/getCityMap")
+	public List<CityMapOutput> getCityMapOutput() throws JsonParseException, JsonMappingException, IOException{
+		List<LocationEpidemic> locationList=locationEpidemicRepository.findAll();
+		List<CityMapOutput>cityMapOutput=new ArrayList<CityMapOutput>();
+		CityMapOutput tmpCity=new CityMapOutput();
+		String tmpCityName="";
+		List<CitySymptomsOutput>list=new ArrayList<CitySymptomsOutput>();
+		LocationEpidemicPk pk=null;
+		CitySymptomsOutput symp=new CitySymptomsOutput();
+		pandemicAlertConfiguration.setCityMap(null);
+		List<String>cityList=pandemicAlertConfiguration.getCityList();
+		Map<String,CityMapLocation>cityLocation=pandemicAlertConfiguration.getCityMap();
+		for(LocationEpidemic ep:locationList){
+			pk=ep.getId();
+			tmpCity=new CityMapOutput();
+			tmpCityName=pk.getCityName();
+			list=new ArrayList<CitySymptomsOutput>();
+			if(cityList.contains(tmpCityName)){
+				tmpCity.setCity(tmpCityName);
+				tmpCity.setLATITUDE(cityLocation.get(tmpCityName).getLATITUDE());
+				tmpCity.setLONGITUDE(cityLocation.get(tmpCityName).getLONGITUDE());
+				tmpCity.setOccurance(ep.getInstanceCount());
+				symp.setSymptoms(pk.getEpidemic());
+				list.add(symp);
+				tmpCity.setSymptoms(list);
+				cityMapOutput.add(tmpCity);
+			}
+		}
+		
+		return cityMapOutput;
+	}
+}

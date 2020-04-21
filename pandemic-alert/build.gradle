@@ -1,0 +1,31 @@
+plugins {
+	id 'org.springframework.boot' version '2.2.6.RELEASE'
+	id 'io.spring.dependency-management' version '1.0.9.RELEASE'
+	id 'java'
+}
+
+group = 'com.cfc.contagino'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '1.8'
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	
+	// https://mvnrepository.com/artifact/com.ibm.db2.jcc/db2jcc
+	compile group: 'com.ibm.db2', name: 'jcc', version: '11.5.0.0'
+	//IBM watson lib
+	compile group: 'com.ibm.watson', name: 'ibm-watson', version: '8.3.1'
+	
+	testImplementation('org.springframework.boot:spring-boot-starter-test') {
+		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+	}
+}
+
+test {
+	useJUnitPlatform()
+}

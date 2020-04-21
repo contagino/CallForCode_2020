@@ -1,0 +1,22 @@
+[{
+	"ID": "1",
+	"ID_STATE": "2",
+	"CITY": "Adak",
+	"COUNTY": "Aleutians West",
+	"LATITUDE": "55.999722",
+	"LONGITUDE": "-161.207778"
+}, {
+	"ID": "2",
+	"ID_STATE": "2",
+	"CITY": "Akiachak",
+	"COUNTY": "Bethel",
+	"LATITUDE": "60.891854",
+	"LONGITUDE": "-161.39233"
+}, {
+	"ID": "3",
+	"ID_STATE": "2",
+	"CITY": "Akiak",
+	"COUNTY": "Bethel",
+	"LATITUDE": "60.890632",
+	"LONGITUDE": "-161.199325"
+}]
