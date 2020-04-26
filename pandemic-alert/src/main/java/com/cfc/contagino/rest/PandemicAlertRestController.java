@@ -4,36 +4,38 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Iterator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
-import org.assertj.core.api.IteratorAssert;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
 import com.cfc.contagino.bean.SocialMediaFeedResponse;
 import com.cfc.contagino.bo.PandemicAlertBo;
-import com.cfc.contagino.bo.PandemicAlertBoImpl;
 import com.cfc.contagino.config.PandemicAlertConfiguration;
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import com.cfc.contagino.entity.*;
+import com.cfc.contagino.entity.CityMapLocation;
+import com.cfc.contagino.entity.CityMapOutput;
+import com.cfc.contagino.entity.CitySymptomsOutput;
+import com.cfc.contagino.entity.LocationEpidemic;
+import com.cfc.contagino.entity.LocationEpidemicPk;
+import com.cfc.contagino.entity.NluOutPut;
+import com.cfc.contagino.entity.Post;
+import com.cfc.contagino.entity.SocialMediaFeed;
 import com.cfc.contagino.exception.PandemicAlertException;
 import com.cfc.contagino.repository.LocationEpidemicRepository;
 import com.cfc.contagino.repository.NluOutputRepository;
-import com.cfc.contagino.repository.PostRepository;
+import com.cfc.contagino.uti.PatternMatcher;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 
 @CrossOrigin("*")
 @RestController
@@ -137,45 +139,83 @@ public class PandemicAlertRestController {
 	}
 	
 	@GetMapping("/saveLocationEpidemic")
-	public List<LocationEpidemic>saveLocationEpidemic(){
+	public Object saveLocationEpidemic(){
+		Map<LocationEpidemicPk,Integer> locationEpidemicPkWiseCounts = new HashMap<>();
 		try{
-			List<NluOutPut> nluLocationOutput=pandemicAlertBo.findNluByEntityType("Location");
-			List<String>postIds=null;
-			/*for(NluOutPut op:nluLocationOutput){
-				postIds.add(op.getPostId());
-			}*/
-			//List<NluOutPut>nluPostIdOutput=nluOutputRepository.findBypostIDIn(postIds);
-			Map<String,Integer>locationOccurance=new HashMap<String,Integer>();
-			String city="";
-			for(NluOutPut op:nluLocationOutput){
-				city=op.getText();
-				city=city.toUpperCase();
-				if(locationOccurance.get(city)!=null){
-					locationOccurance.put(city, locationOccurance.get(city)+1);
-				}else{
-					locationOccurance.put(city,1);
-				}
-			}
+			/*
+			 * First fetch all the distinct postIds having entity type  "Location" only.
+			 */
+			List<NluOutPut> nluLocationOutputList = pandemicAlertBo.findNluByEntityType("Location");
+			List<String> postIds = new ArrayList<>();
 			
-			List<LocationEpidemic>locationEpidemic=new ArrayList<LocationEpidemic>();
-			LocationEpidemic tmpObj=new LocationEpidemic();
-			LocationEpidemicPk id=new LocationEpidemicPk();
-			String loc="";
-			for(Map.Entry<String, Integer> entry:locationOccurance.entrySet()){
-				loc=entry.getKey();
-				id=new LocationEpidemicPk(loc, "Covid19");
-				tmpObj=new LocationEpidemic();
-				tmpObj.setId(id);
-				tmpObj.setInstanceCount(locationOccurance.get(loc));
-				tmpObj.setLastReported(new Date());
-				locationEpidemic.add(tmpObj);
-			}
-			locationEpidemicRepository.saveAll(locationEpidemic);
+			Map<String,String> postIdWiseLocation = new HashMap<>();
+			nluLocationOutputList.forEach(output -> {
+				postIds.add(output.getPostId());
+				postIdWiseLocation.put(output.getPostId(), output.getText().trim().toUpperCase());
+			});
+			
+			/*
+			 * Now get the all NluLocationOutput objects for above postIds.
+			 */
+			System.out.println("pandemicAlertConfiguration.getSocialSearchKeywords():"+pandemicAlertConfiguration.getSocialSearchKeywords());
+			System.out.println("getAllDiseasesValues:"+pandemicAlertConfiguration.getAllDiseasesValues());
+			Set<String> uniquePostIds = new HashSet<>();
+			Set<String> uniqueLocations = new HashSet<>();
+			List<NluOutPut> nluOutPutDatas = nluOutputRepository.findAll();
+			nluOutPutDatas.stream().filter(data -> (postIds.contains(data.getPostId()) && !data.getType().equalsIgnoreCase("Location")))
+								   .filter(data -> (PatternMatcher.matcher(pandemicAlertConfiguration.getAllDiseasesValues(),data.getText())))
+								   .forEach(data -> {
+									   for(String key : pandemicAlertConfiguration.getDiseases().keySet()) {
+										   if(PatternMatcher.matcher(pandemicAlertConfiguration.getAllDiseasesValues(),data.getText())  && PatternMatcher.matcher(pandemicAlertConfiguration.getTag(),data.getType())) { 
+											   if(!uniquePostIds.add(data.getPostId())) {
+												   continue;
+											   }
+											   String location = postIdWiseLocation.get(data.getPostId());
+											   uniqueLocations.add(location);
+											   LocationEpidemicPk pk = new LocationEpidemicPk(location,key);
+											   locationEpidemicPkWiseCounts.put(pk,  locationEpidemicPkWiseCounts.get(pk) == null ? 1 : locationEpidemicPkWiseCounts.get(pk) + 1);
+											   break;
+										   }
+									    }
+								   });
+			System.out.println("New pandemic count location wise::"+locationEpidemicPkWiseCounts);
+			
+			
+			/*
+			 * Logic to fetch existing records from database and merge common data with them and fresh insert new records
+			 */
+			
+			List<LocationEpidemic> existingLocationEpidemicRecrds = locationEpidemicRepository.findAllById(locationEpidemicPkWiseCounts.keySet());
+			Map<LocationEpidemicPk,LocationEpidemic> existingRecords = existingLocationEpidemicRecrds.stream().collect(Collectors.toMap(data -> data.getId(), data -> data));
+			List<LocationEpidemic> entities = new ArrayList<>();
+			locationEpidemicPkWiseCounts.keySet().forEach(pk -> {
+				LocationEpidemic object = existingRecords.get(pk);
+				if(object != null) {
+					object.setInstanceCount(object.getInstanceCount() + locationEpidemicPkWiseCounts.get(pk));
+					object.setLastReported(new Date());
+					entities.add(object);
+					System.out.println("Old record updated for location:"+object.getId().getCityName()+" & pandemic:"+object.getId().getEpidemic());
+				}
+				else{
+					LocationEpidemic newObject = new LocationEpidemic();
+					newObject.setId(pk);
+					newObject.setInstanceCount(locationEpidemicPkWiseCounts.get(pk));
+					newObject.setLastReported(new Date());
+					entities.add(newObject);
+					System.out.println("New record updated for location:"+object.getId().getCityName()+" & pandemic:"+object.getId().getEpidemic());
+				}
+			});
+			
+			/*
+			 * Finally save all data in the database.
+			 */
+			System.out.println("Entities:"+entities);
+			locationEpidemicRepository.saveAll(entities);
 			
 		}catch(Exception e){
 			e.printStackTrace();
 		}
-		return null;
+		return locationEpidemicRepository.findAll();
 	}
 	
 	@GetMapping("/getCityMap")

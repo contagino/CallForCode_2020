@@ -3,6 +3,7 @@ package com.cfc.contagino.config;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +44,13 @@ public class PandemicAlertConfiguration {
 	
 	@Value("${pandemic.ibm-nlu.api-key}")
 	private String ibmNluApiKey;
+	
+	
+	@Value("${diseases.key}")
+	private String diseases;
+	
+	@Value("${diseases.tag}")
+	private String tag;
 	
 	private Map<String, CityMapLocation> cityMap;
 	
@@ -90,6 +98,45 @@ public class PandemicAlertConfiguration {
 
 	public Map<String, CityMapLocation> getCityMap() {
 		return cityMap;
+	}
+	
+
+	public Map<String,String> getDiseases() {
+		Map<String,String> diseaseKeywordsMap = new HashMap<>();
+//		COVID19-corona virus OR covid19|FEVER-fever
+		String[] diseasesKeys = this.diseases.split("\\|");
+		for(String key : diseasesKeys){
+			String[] values = key.split("\\~");
+			diseaseKeywordsMap.put(values[0], values[1]);
+		}
+		return diseaseKeywordsMap;
+	}
+	
+	public String getAllDiseasesValues() {
+		Collection<String> values = this.getDiseases().values();
+		StringBuilder resultValues = new StringBuilder();
+		for(String value : values){
+			if(resultValues.length() == 0) {
+				resultValues.append(value);
+			}
+			else {
+				resultValues.append(" OR ").append(value);
+			}
+			
+		}
+		return resultValues.toString();
+	}
+
+	public void setDiseases(String diseases) {
+		this.diseases = diseases;
+	}
+	
+	public String getTag() {
+		return tag;
+	}
+
+	public void setTag(String tag) {
+		this.tag = tag;
 	}
 
 	public void setCityMap(Map<String, CityMapLocation> cityMap) throws JsonParseException, JsonMappingException, IOException {

@@ -22,6 +22,25 @@ public class LocationEpidemicPk implements Serializable{
 		super();
 	}
 
+
+	public String getCityName() {
+		return cityName;
+	}
+
+	public void setCityName(String cityName) {
+		this.cityName = cityName;
+	}
+
+	public String getEpidemic() {
+		return epidemic;
+	}
+
+	public void setEpidemic(String epidemic) {
+		this.epidemic = epidemic;
+	}
+	
+	
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -53,19 +72,10 @@ public class LocationEpidemicPk implements Serializable{
 		return true;
 	}
 
-	public String getCityName() {
-		return cityName;
+	@Override
+	public String toString() {
+		return "LocationEpidemicPk [cityName=" + cityName + ", epidemic=" + epidemic + "]";
 	}
-
-	public void setCityName(String cityName) {
-		this.cityName = cityName;
-	}
-
-	public String getEpidemic() {
-		return epidemic;
-	}
-
-	public void setEpidemic(String epidemic) {
-		this.epidemic = epidemic;
-	}
+	
+	
 }

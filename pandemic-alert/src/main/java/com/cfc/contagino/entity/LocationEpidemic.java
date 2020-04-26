@@ -43,4 +43,10 @@ public class LocationEpidemic {
 	public void setLastReported(Date lastReported) {
 		this.lastReported = lastReported;
 	}
+
+	@Override
+	public String toString() {
+		return "LocationEpidemic [id=" + id + ", instanceCount=" + instanceCount + ", lastReported=" + lastReported
+				+ "]";
+	}
 }
