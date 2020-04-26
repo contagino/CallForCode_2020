@@ -36,8 +36,6 @@ public class PatternMatcher {
 			Pattern pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
 			Matcher matcher = pattern.matcher(post);
 			while (matcher.find()) {
-				System.out.println("Found:");
-				System.out.println("Expression:" + regex);
 				return true;
 			}
 		}

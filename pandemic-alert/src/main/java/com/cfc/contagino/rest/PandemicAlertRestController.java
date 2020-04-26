@@ -167,7 +167,7 @@ public class PandemicAlertRestController {
 								   .forEach(data -> {
 									   for(String key : pandemicAlertConfiguration.getDiseases().keySet()) {
 										   if(PatternMatcher.matcher(pandemicAlertConfiguration.getAllDiseasesValues(),data.getText())  && PatternMatcher.matcher(pandemicAlertConfiguration.getTag(),data.getType())) { 
-											   if(!uniquePostIds.add(data.getPostId())) {
+											   if(!uniquePostIds.add(key+":"+data.getPostId())) {
 												   continue;
 											   }
 											   String location = postIdWiseLocation.get(data.getPostId());
@@ -202,7 +202,7 @@ public class PandemicAlertRestController {
 					newObject.setInstanceCount(locationEpidemicPkWiseCounts.get(pk));
 					newObject.setLastReported(new Date());
 					entities.add(newObject);
-					System.out.println("New record updated for location:"+object.getId().getCityName()+" & pandemic:"+object.getId().getEpidemic());
+					System.out.println("New record updated for location:"+newObject.getId().getCityName()+" & pandemic:"+newObject.getId().getEpidemic());
 				}
 			});
 			
