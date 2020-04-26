@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -84,9 +85,14 @@ public class PandemicAlertRestController {
 	public List<Post> saveAllPost(){
 		List<Post>posts=new ArrayList<Post>();
 		SocialMediaFeedResponse socialMediaFeedResponse=getSocialMediaFeed();
-		posts=socialMediaFeedResponse.getPost();
+		posts = socialMediaFeedResponse.getPost();
 		try {
-			posts=pandemicAlertBo.saveSocialMediaPosts(posts);
+			/*
+			 * Only YML configured language will be considered here.
+			 */
+			List<Post> sortedPost = posts.stream().filter(post -> (post.getLang() != null && pandemicAlertConfiguration.getSocialSearchLanguage().contains(post.getLang().trim().toLowerCase())))
+					                              .collect(Collectors.toList());
+			posts = pandemicAlertBo.saveSocialMediaPosts(sortedPost);
 		} catch (PandemicAlertException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -146,13 +152,10 @@ public class PandemicAlertRestController {
 			 * First fetch all the distinct postIds having entity type  "Location" only.
 			 */
 			List<NluOutPut> nluLocationOutputList = pandemicAlertBo.findNluByEntityType("Location");
-			List<String> postIds = new ArrayList<>();
 			
 			Map<String,String> postIdWiseLocation = new HashMap<>();
-			nluLocationOutputList.forEach(output -> {
-				postIds.add(output.getPostId());
-				postIdWiseLocation.put(output.getPostId(), output.getText().trim().toUpperCase());
-			});
+			nluLocationOutputList.forEach(output -> postIdWiseLocation.put(output.getPostId(), output.getText().trim().toUpperCase()));
+			List<String> postIds = new ArrayList<>(postIdWiseLocation.keySet());
 			
 			/*
 			 * Now get the all NluLocationOutput objects for above postIds.
@@ -166,7 +169,7 @@ public class PandemicAlertRestController {
 								   .filter(data -> (PatternMatcher.matcher(pandemicAlertConfiguration.getAllDiseasesValues(),data.getText())))
 								   .forEach(data -> {
 									   for(String key : pandemicAlertConfiguration.getDiseases().keySet()) {
-										   if(PatternMatcher.matcher(pandemicAlertConfiguration.getAllDiseasesValues(),data.getText())  && PatternMatcher.matcher(pandemicAlertConfiguration.getTag(),data.getType())) { 
+										   if(PatternMatcher.matcher(pandemicAlertConfiguration.getDiseases().get(key),data.getText()) && PatternMatcher.matcher(pandemicAlertConfiguration.getTag(),data.getType())) { 
 											   if(!uniquePostIds.add(key+":"+data.getPostId())) {
 												   continue;
 											   }
@@ -186,30 +189,33 @@ public class PandemicAlertRestController {
 			 */
 			
 			List<LocationEpidemic> existingLocationEpidemicRecrds = locationEpidemicRepository.findAllById(locationEpidemicPkWiseCounts.keySet());
-			Map<LocationEpidemicPk,LocationEpidemic> existingRecords = existingLocationEpidemicRecrds.stream().collect(Collectors.toMap(data -> data.getId(), data -> data));
-			List<LocationEpidemic> entities = new ArrayList<>();
-			locationEpidemicPkWiseCounts.keySet().forEach(pk -> {
+			Map<LocationEpidemicPk,LocationEpidemic> existingRecords = existingLocationEpidemicRecrds.stream().collect(Collectors.toMap(LocationEpidemic::getId, Function.identity()));
+			
+			List<LocationEpidemic> entities = locationEpidemicPkWiseCounts.keySet().stream().map(pk -> {
 				LocationEpidemic object = existingRecords.get(pk);
 				if(object != null) {
 					object.setInstanceCount(object.getInstanceCount() + locationEpidemicPkWiseCounts.get(pk));
 					object.setLastReported(new Date());
-					entities.add(object);
 					System.out.println("Old record updated for location:"+object.getId().getCityName()+" & pandemic:"+object.getId().getEpidemic());
+					return object;
 				}
 				else{
 					LocationEpidemic newObject = new LocationEpidemic();
 					newObject.setId(pk);
 					newObject.setInstanceCount(locationEpidemicPkWiseCounts.get(pk));
 					newObject.setLastReported(new Date());
-					entities.add(newObject);
 					System.out.println("New record updated for location:"+newObject.getId().getCityName()+" & pandemic:"+newObject.getId().getEpidemic());
+					return newObject;
+					
 				}
-			});
+			}).collect(Collectors.toList());
+			
 			
 			/*
 			 * Finally save all data in the database.
 			 */
 			System.out.println("Entities:"+entities);
+			
 			locationEpidemicRepository.saveAll(entities);
 			
 		}catch(Exception e){

@@ -18,9 +18,10 @@ pandemic:
     api-key1: 1608b1d406a6f895f7c683a98953be6c
     api-key2: 1a8030fe42c457fe106442e71faeb074
     search-keyword: corona virus OR covid19 OR fever OR highfever
+    search-language: en
   ibm-nlu:
     service-url: https://api.eu-gb.natural-language-understanding.watson.cloud.ibm.com/instances/b3736d00-1f58-487a-905b-701f723c3faa
     api-key: LVuxollv9MZQD56_Tx8Jvtttt8xV9iiN05tLTAsbOWNl
 diseases:
-   key: Covid19~corona OR covid19|Fever~fever OR highfever
-   tag: HealthCondition OR Hashtag OR company
+   key: Covid19~corona OR covid19 OR covid-19 OR covid_19 OR covid-2019 OR covid_2019|Fever~fever OR highfever
+   tag: HealthCondition OR Hashtag

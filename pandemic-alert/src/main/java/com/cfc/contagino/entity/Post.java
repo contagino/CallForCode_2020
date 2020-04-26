@@ -204,4 +204,11 @@ public class Post {
 			this.processFlag = "N";
 	}
 
+	@Override
+	public String toString() {
+		return "Post [postid=" + postid + ", text=" + text + ", lang=" + lang + ", processFlag=" + processFlag + "]";
+	}
+	
+	
+
 }

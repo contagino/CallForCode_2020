@@ -3,6 +3,7 @@ package com.cfc.contagino.config;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -51,6 +52,9 @@ public class PandemicAlertConfiguration {
 	
 	@Value("${diseases.tag}")
 	private String tag;
+	
+	@Value("${pandemic.social-search.search-language}")
+	private String socialSearchLanguage;
 	
 	private Map<String, CityMapLocation> cityMap;
 	
@@ -137,6 +141,15 @@ public class PandemicAlertConfiguration {
 
 	public void setTag(String tag) {
 		this.tag = tag;
+	}
+	
+	public List<String> getSocialSearchLanguage() {
+		String[] languages = this.socialSearchLanguage.split("OR");
+		return new ArrayList<>(Arrays.asList(languages));
+	}
+
+	public void setSocialSearchLanguage(String socialSearchLanguage) {
+		this.socialSearchLanguage = socialSearchLanguage;
 	}
 
 	public void setCityMap(Map<String, CityMapLocation> cityMap) throws JsonParseException, JsonMappingException, IOException {
