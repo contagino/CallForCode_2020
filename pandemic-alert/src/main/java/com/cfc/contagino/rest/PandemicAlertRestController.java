@@ -262,11 +262,11 @@ public class PandemicAlertRestController {
 		String tmpCityName="";
 		List<CitySymptomsOutput>list=new ArrayList<CitySymptomsOutput>();
 		LocationEpidemicPk pk=null;
-		CitySymptomsOutput symp=new CitySymptomsOutput();
 		pandemicAlertConfiguration.setCityMap(null);
 		List<String>cityList=pandemicAlertConfiguration.getCityList();
 		Map<String,CityMapLocation>cityLocation=pandemicAlertConfiguration.getCityMap();
 		for(LocationEpidemic ep:locationList){
+			CitySymptomsOutput symp=new CitySymptomsOutput();
 			pk=ep.getId();
 			tmpCity=new CityMapOutput();
 			tmpCityName=pk.getCityName();
