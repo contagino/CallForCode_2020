@@ -160,9 +160,9 @@ public class PandemicAlertConfiguration {
 	public void setCityMap(Map<String, CityMapLocation> cityMap) throws JsonParseException, JsonMappingException, IOException {
 		ObjectMapper mapper = new ObjectMapper();
 		mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-		//<CityMapLocation> cityLocation = mapper.readValue(new File("C:\\Users\\Administrator\\Desktop\\Call or Code\\pandemic-alert\\src\\main\\resources\\us_cities.json"), new TypeReference<List<CityMapLocation>>(){});
-		File file =new ClassPathResource("us_cities.json").getFile();
-		List<CityMapLocation> cityLocation = mapper.readValue(file, new TypeReference<List<CityMapLocation>>(){});
+		List<CityMapLocation> cityLocation = mapper.readValue(new File("C:\\Users\\Administrator\\Desktop\\Call or Code\\pandemic-alert\\src\\main\\resources\\us_cities.json"), new TypeReference<List<CityMapLocation>>(){});
+		//File file =new ClassPathResource("us_cities.json").getFile();
+		//List<CityMapLocation> cityLocation = mapper.readValue(new File(file.getAbsolutePath()+"/"+file.getName()), new TypeReference<List<CityMapLocation>>(){});
 		Map<String, CityMapLocation> tmpMap=new HashMap<String, CityMapLocation>();
 		List<String>cityLst=new ArrayList<String>();
 		for(CityMapLocation city:cityLocation){
