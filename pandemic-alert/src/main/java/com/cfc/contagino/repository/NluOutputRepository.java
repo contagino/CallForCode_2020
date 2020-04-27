@@ -12,4 +12,8 @@ public interface NluOutputRepository extends JpaRepository<NluOutPut, Long>{
 	
 	public List<NluOutPut> findBypostIDIn(List<String> postIds);
 
+	public List<NluOutPut> findByTypeAndProcessFlag(String type, String activeInd);
+
+	public List<NluOutPut> findByProcessFlag(String activeInd);
+
 }

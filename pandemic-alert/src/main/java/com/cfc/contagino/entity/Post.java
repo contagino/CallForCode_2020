@@ -45,8 +45,8 @@ public class Post {
 	@JsonProperty("lang")
 	private String lang;
 
-	@Column(name = "CFC_PROCESS_FLAG", length = 1)
-	private String processFlag; // possible values N - New , C - Converted, P - Processed
+	@Column(name = "CFC_PROCESS_IND", length = 1)
+	private String processFlag; // possible values N - New , Y - Processed
 
 	@Transient
 	@JsonProperty("type")
@@ -200,8 +200,9 @@ public class Post {
 
 	@PrePersist
 	public void prePersist() {
-		if (this.processFlag == null)
+		if (this.processFlag == null || this.processFlag.equals("")) {
 			this.processFlag = "N";
+		}
 	}
 
 	@Override

@@ -23,6 +23,7 @@ import org.springframework.web.client.RestTemplate;
 import com.cfc.contagino.bean.SocialMediaFeedResponse;
 import com.cfc.contagino.bo.PandemicAlertBo;
 import com.cfc.contagino.config.PandemicAlertConfiguration;
+import com.cfc.contagino.constant.PandemicAlertConstant;
 import com.cfc.contagino.entity.CityMapLocation;
 import com.cfc.contagino.entity.CityMapOutput;
 import com.cfc.contagino.entity.CitySymptomsOutput;
@@ -123,10 +124,16 @@ public class PandemicAlertRestController {
 		List<NluOutPut> masterList=new ArrayList<NluOutPut>();
 		List<NluOutPut> deltaList=new ArrayList<NluOutPut>();
 		try{
-			List<Post>posts=pandemicAlertBo.getPostsByLanguage("en");
-			for(Post post:posts){
+			List<Post> posts = pandemicAlertBo.getAllNewPosts();
+			/*
+			 * Only YML configured language will be considered here. If anything not configured then all data will be loaded in our database.
+			 */
+			List<String> configuredLanagues = pandemicAlertConfiguration.getSocialSearchLanguage();
+			List<Post> sortedPosts = posts.stream().filter(post -> (post.getLang() != null && (configuredLanagues.isEmpty() || configuredLanagues.contains(post.getLang().trim().toLowerCase()))))
+					                              .collect(Collectors.toList());
+			for(Post sortedPost : sortedPosts){
 				try{
-					deltaList=pandemicAlertBo.analyzeText(post.getPostid(), post.getText());
+					deltaList=pandemicAlertBo.analyzeText(sortedPost.getPostid(), sortedPost.getText());
 					masterList.addAll(deltaList);
 					deltaList=null;
 				}catch(Exception e){}
@@ -139,10 +146,20 @@ public class PandemicAlertRestController {
 	
 	@GetMapping("/saveNluOutput")
 	public List<NluOutPut>saveNluOutput(){
-		List<NluOutPut> allNluOutput=new ArrayList<NluOutPut>();
+		List<NluOutPut> allNluOutput = new ArrayList<NluOutPut>();
 		try {
-				List<NluOutPut>masterList=processPost();
-				allNluOutput=pandemicAlertBo.saveNluOutput(masterList);
+				List<NluOutPut> masterList= processPost();
+				allNluOutput = pandemicAlertBo.saveNluOutput(masterList);
+				// Finally update post to inactive state
+				List<Post> posts = pandemicAlertBo.getAllNewPosts();
+				/*
+				 * Only YML configured language will be considered here. If anything not configured then all data will be loaded in our database.
+				 */
+				List<String> configuredLanagues = pandemicAlertConfiguration.getSocialSearchLanguage();
+				List<Post> sortedPosts = posts.stream().filter(post -> (post.getLang() != null && (configuredLanagues.isEmpty() || configuredLanagues.contains(post.getLang().trim().toLowerCase()))))
+						                              .collect(Collectors.toList());
+				sortedPosts.forEach(post -> post.setProcessFlag(PandemicAlertConstant.INACTIVE_IND));
+				pandemicAlertBo.saveSocialMediaPosts(sortedPosts);
 		} catch (PandemicAlertException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -157,7 +174,7 @@ public class PandemicAlertRestController {
 			/*
 			 * First fetch all the distinct postIds having entity type  "Location" only.
 			 */
-			List<NluOutPut> nluLocationOutputList = pandemicAlertBo.findNluByEntityType("Location");
+			List<NluOutPut> nluLocationOutputList = pandemicAlertBo.findNluByEntityType(PandemicAlertConstant.LOCATION);
 			
 			Map<String,String> postIdWiseLocation = new HashMap<>();
 			nluLocationOutputList.forEach(output -> postIdWiseLocation.put(output.getPostId(), output.getText().trim().toUpperCase()));
@@ -174,8 +191,8 @@ public class PandemicAlertRestController {
 			System.out.println("diseasesKeyMap:"+diseasesKeyMap);
 			Set<String> uniquePostIds = new HashSet<>();
 			Set<String> uniqueLocations = new HashSet<>();
-			List<NluOutPut> nluOutPutDatas = nluOutputRepository.findAll();
-			nluOutPutDatas.stream().filter(data -> (postIds.contains(data.getPostId()) && !data.getType().equalsIgnoreCase("Location")))
+			List<NluOutPut> nluOutPutDatas = nluOutputRepository.findByProcessFlag(PandemicAlertConstant.ACTIVE_IND);
+			nluOutPutDatas.stream().filter(data -> (postIds.contains(data.getPostId()) && !data.getType().equalsIgnoreCase(PandemicAlertConstant.LOCATION)))
 								   .filter(data -> (PatternMatcher.matcher(allDiseasesValues,data.getText())))
 								   .forEach(data -> {
 									   for(String key : diseasesKeyMap.keySet()) {
@@ -227,6 +244,10 @@ public class PandemicAlertRestController {
 			System.out.println("Entities:"+entities);
 			
 			locationEpidemicRepository.saveAll(entities);
+			
+			// Finally update the process indicator to "Y" for all nluoutput data
+			nluOutPutDatas.forEach(nluData -> nluData.setProcessFlag(PandemicAlertConstant.INACTIVE_IND));
+			nluOutputRepository.saveAll(nluOutPutDatas);
 			
 		}catch(Exception e){
 			e.printStackTrace();

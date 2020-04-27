@@ -14,7 +14,7 @@ public interface PandemicAlertDao {
 	
 	public List<Post> getAllPosts() throws PandemicAlertException;
 	
-	public List<Post> getPostsByLanguage(String ln) throws PandemicAlertException;
+	public List<Post> getAllNewPosts() throws PandemicAlertException;
 	
 	public List<NluOutPut> saveNluOutput(List<NluOutPut> masterList) throws PandemicAlertException;
 	

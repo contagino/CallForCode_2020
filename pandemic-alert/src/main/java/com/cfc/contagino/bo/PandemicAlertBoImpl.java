@@ -74,8 +74,8 @@ public class PandemicAlertBoImpl implements PandemicAlertBo{
 	}
 
 	@Override
-	public List<Post> getPostsByLanguage(String ln) throws PandemicAlertException {
-		return pandemicAlertDao.getPostsByLanguage(ln);
+	public List<Post> getAllNewPosts() throws PandemicAlertException {
+		return pandemicAlertDao.getAllNewPosts();
 	}
 
 	@Override

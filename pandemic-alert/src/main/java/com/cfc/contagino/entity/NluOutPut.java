@@ -4,6 +4,7 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Column;
 
@@ -39,6 +40,9 @@ public class NluOutPut {
 	@Column(name="CFC_POST_ID")
 	@JsonProperty("postID")
 	private String postID;
+	
+	@Column(name = "CFC_PROCESS_IND", length = 1)
+	private String processFlag; // possible values N - New , Y - Processed
 	
 	@JsonProperty("nluId")
 	public long getNluId() {
@@ -93,4 +97,18 @@ public class NluOutPut {
 	public void setPostId(String postId) {
 		this.postID = postId;
 	}
+	public String getProcessFlag() {
+		return processFlag;
+	}
+	public void setProcessFlag(String processFlag) {
+		this.processFlag = processFlag;
+	}
+	
+	@PrePersist
+	public void prePersist() {
+		if (this.processFlag == null || this.processFlag.equals("")) {
+			this.processFlag = "N";
+		}
+	}
+	
 }

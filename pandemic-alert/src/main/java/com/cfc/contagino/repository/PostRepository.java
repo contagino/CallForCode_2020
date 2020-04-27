@@ -10,5 +10,8 @@ import com.cfc.contagino.exception.PandemicAlertException;
 
 @Repository
 public interface PostRepository extends JpaRepository<Post, Long>{
+	
 	public List<Post> findByLang(String ln) throws PandemicAlertException;
+
+	public List<Post> findByProcessFlag(String activeInd) throws PandemicAlertException;
 }
