@@ -144,7 +144,10 @@ public class PandemicAlertConfiguration {
 	}
 	
 	public List<String> getSocialSearchLanguage() {
-		String[] languages = this.socialSearchLanguage.split("OR");
+		if((this.socialSearchLanguage == null) || (this.socialSearchLanguage.trim().equals(""))){
+			return new ArrayList<>();
+		}
+		String[] languages = this.socialSearchLanguage.trim().split(" OR ");
 		return new ArrayList<>(Arrays.asList(languages));
 	}
 

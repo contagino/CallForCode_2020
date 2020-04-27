@@ -88,9 +88,10 @@ public class PandemicAlertRestController {
 		posts = socialMediaFeedResponse.getPost();
 		try {
 			/*
-			 * Only YML configured language will be considered here.
+			 * Only YML configured language will be considered here. If anything not configured then all data will be loaded in our database.
 			 */
-			List<Post> sortedPost = posts.stream().filter(post -> (post.getLang() != null && pandemicAlertConfiguration.getSocialSearchLanguage().contains(post.getLang().trim().toLowerCase())))
+			List<String> configuredLanagues = pandemicAlertConfiguration.getSocialSearchLanguage();
+			List<Post> sortedPost = posts.stream().filter(post -> (post.getLang() != null && (configuredLanagues.isEmpty() || configuredLanagues.contains(post.getLang().trim().toLowerCase()))))
 					                              .collect(Collectors.toList());
 			posts = pandemicAlertBo.saveSocialMediaPosts(sortedPost);
 		} catch (PandemicAlertException e) {
@@ -161,15 +162,19 @@ public class PandemicAlertRestController {
 			 * Now get the all NluLocationOutput objects for above postIds.
 			 */
 			System.out.println("pandemicAlertConfiguration.getSocialSearchKeywords():"+pandemicAlertConfiguration.getSocialSearchKeywords());
-			System.out.println("getAllDiseasesValues:"+pandemicAlertConfiguration.getAllDiseasesValues());
+			
+			String allDiseasesValues = pandemicAlertConfiguration.getAllDiseasesValues();
+			Map<String,String> diseasesKeyMap = pandemicAlertConfiguration.getDiseases();
+			System.out.println("getAllDiseasesValues:"+allDiseasesValues);
+			System.out.println("diseasesKeyMap:"+diseasesKeyMap);
 			Set<String> uniquePostIds = new HashSet<>();
 			Set<String> uniqueLocations = new HashSet<>();
 			List<NluOutPut> nluOutPutDatas = nluOutputRepository.findAll();
 			nluOutPutDatas.stream().filter(data -> (postIds.contains(data.getPostId()) && !data.getType().equalsIgnoreCase("Location")))
-								   .filter(data -> (PatternMatcher.matcher(pandemicAlertConfiguration.getAllDiseasesValues(),data.getText())))
+								   .filter(data -> (PatternMatcher.matcher(allDiseasesValues,data.getText())))
 								   .forEach(data -> {
-									   for(String key : pandemicAlertConfiguration.getDiseases().keySet()) {
-										   if(PatternMatcher.matcher(pandemicAlertConfiguration.getDiseases().get(key),data.getText()) && PatternMatcher.matcher(pandemicAlertConfiguration.getTag(),data.getType())) { 
+									   for(String key : diseasesKeyMap.keySet()) {
+										   if(PatternMatcher.matcher(diseasesKeyMap.get(key),data.getText()) && PatternMatcher.matcher(pandemicAlertConfiguration.getTag(),data.getType())) { 
 											   if(!uniquePostIds.add(key+":"+data.getPostId())) {
 												   continue;
 											   }
