@@ -64,7 +64,6 @@ public class PandemicAlertRestController {
 	
 	@GetMapping("/test")
 	public String testService() throws JsonMappingException, JsonProcessingException{
-		saveAllPost();
 		return "Service is UP and Running....";
 	}
 	
