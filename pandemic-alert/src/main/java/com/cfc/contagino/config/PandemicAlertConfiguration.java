@@ -46,7 +46,6 @@ public class PandemicAlertConfiguration {
 	@Value("${pandemic.ibm-nlu.api-key}")
 	private String ibmNluApiKey;
 	
-	
 	@Value("${diseases.key}")
 	private String diseases;
 	
@@ -59,6 +58,8 @@ public class PandemicAlertConfiguration {
 	private Map<String, CityMapLocation> cityMap;
 	
 	private List<String>cityList;
+	
+	private int keyUseCount;
 
 	public String getSocialSearchServiceUrl() {
 		return socialSearchServiceUrl;
@@ -176,4 +177,13 @@ public class PandemicAlertConfiguration {
 	public void setCityList(List<String> cityList) {
 		this.cityList = cityList;
 	}
+
+	public int getKeyUseCount() {
+		return keyUseCount;
+	}
+
+	public void setKeyUseCount(int keyUseCount) {
+		this.keyUseCount = keyUseCount;
+	}
+	
 }

@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
@@ -78,6 +79,10 @@ public class PandemicAlertRestController {
 		SocialMediaFeed socialMediaFeed=restTemplate.getForObject(serviceUrl, SocialMediaFeed.class);
 		SocialMediaFeedResponse socialMediaFeedResponse=new SocialMediaFeedResponse();
 		socialMediaFeedResponse.setPost(socialMediaFeed.getPosts());
+		/*
+		 * Increment the count of the key-used once its successfully used.
+		 */
+		pandemicAlertConfiguration.setKeyUseCount(pandemicAlertConfiguration.getKeyUseCount() + 1);
 		return socialMediaFeedResponse;
 	}
 	
@@ -260,4 +265,34 @@ public class PandemicAlertRestController {
 		
 		return cityMapOutput;
 	}
+	
+	@GetMapping(value="/config/info/{pin}")
+	public Map<String,String> getConfig(@PathVariable("pin") final String pin){
+		Map<String,String> configDetails = new HashMap<>();
+		if(pin != null && pin.equalsIgnoreCase("abcd4321")) {
+			configDetails.put("Search-Key", pandemicAlertConfiguration.getSocialSearchApiKey());
+			configDetails.put("Search-Key-Used-Cnt", String.valueOf(pandemicAlertConfiguration.getKeyUseCount()));
+		}
+		else {
+			configDetails.put("Access", "Unauthorized");
+		}
+		return configDetails;
+	}
+	
+	@GetMapping(value="/config/reset/{pin}/{key1}")
+	public Map<String,String> resetConfig(@PathVariable("pin") final String pin,@PathVariable("key1") final String key1){
+		
+		Map<String,String> configDetails = new HashMap<>();
+		if(pin != null && pin.equalsIgnoreCase("abcd4321")) {
+			pandemicAlertConfiguration.setSocialSearchApiKey(key1);
+			pandemicAlertConfiguration.setKeyUseCount(0);
+			configDetails.put("Status", "Reset Successfully");
+		}
+		else {
+			configDetails.put("Access", "Unauthorized");
+		}
+		return configDetails;
+		
+	}
+	
 }
